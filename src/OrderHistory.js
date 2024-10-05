@@ -1,11 +1,10 @@
-
 import React from 'react';
 
 const OrderHistory = ({ orders }) => {
   return (
     <div className="container mx-auto p-4">
       <h2 className="text-2xl font-bold mb-4">Order History</h2>
-      {orders.length === 0 ? (
+      {Array.isArray(orders) && orders.length === 0 ? ( // Check if orders is an array
         <p>No orders placed yet.</p>
       ) : (
         <ul className="space-y-4">

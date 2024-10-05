@@ -1,61 +1,75 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
 import OrderForm from './OrderForm';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-const Menu = ({ orders, setOrders }) => {
-  const [dishes, setDishes] = useState([]);
+const Menu = ({ dishes, orders, setOrders, setDishes }) => {
   const [orderFormVisible, setOrderFormVisible] = useState(false);
   const [selectedDishes, setSelectedDishes] = useState({});
   const [errorMessage, setErrorMessage] = useState('');
 
-  useEffect(() => {
-    const fetchDishes = async () => {
-      const response = await axios.get("https://api.jsonbin.io/v3/b/66faa41facd3cb34a88ed968");
-      setDishes(response.data.record);
-    };
-    fetchDishes();
-  }, []);
-
   const toggleDishSelection = (dish) => {
+    if (dish.available_quantity === 0) {
+      toast.error(`"${dish.name}" is currently out of stock. Please come back later.`);
+      return;
+    }
+
     setSelectedDishes(prev => {
       const newSelection = { ...prev };
       if (newSelection[dish.id]) {
-        delete newSelection[dish.id]; // Remove the dish if already selected
+        delete newSelection[dish.id];
       } else {
-        newSelection[dish.id] = { dish, quantity: 1 }; // Select the dish with initial quantity of 1
+        newSelection[dish.id] = { dish, quantity: 1 };
       }
       return newSelection;
     });
   };
 
   const updateQuantity = (dish, quantity) => {
-    if (quantity < 1) return; // Prevent setting quantity below 1
+    if (quantity < 1 || quantity > dish.available_quantity) {
+      return; // Prevent invalid quantities
+    }
     setSelectedDishes(prev => ({
       ...prev,
-      [dish.id]: { ...prev[dish.id], quantity: Math.min(quantity, dish.available_quantity) }, // Ensure max quantity doesn't exceed available
+      [dish.id]: { ...prev[dish.id], quantity },
     }));
   };
 
   const placeOrder = (orderDetails) => {
     let exceedsAvailability = false;
 
+    // Check availability
     for (const item of Object.values(selectedDishes)) {
-      if (item.quantity > item.dish.available_quantity) {
+      const dish = dishes.find(d => d.id === item.dish.id);
+      if (!dish || item.quantity > dish.available_quantity) {
         exceedsAvailability = true;
         break;
       }
     }
 
     if (exceedsAvailability) {
-      setErrorMessage('You cannot order more than the available quantity for one or more dishes.');
+      setErrorMessage('Some dishes are no longer available. Please adjust your order.');
+      toast.error('Unable to place order due to insufficient stock.');
       return;
     }
 
-    // Create the order and reset states
+    // Update the available quantities
+    const updatedDishes = dishes.map(dish => {
+      const selected = selectedDishes[dish.id];
+      if (selected) {
+        return { ...dish, available_quantity: dish.available_quantity - selected.quantity };
+      }
+      return dish;
+    });
+
+    setDishes(updatedDishes); // Update dishes state in App.js
+
+    // Create the order
     setOrders([...orders, { dishes: Object.values(selectedDishes), ...orderDetails }]);
     setSelectedDishes({});
     setOrderFormVisible(false);
     setErrorMessage('');
+    toast.success('Order placed successfully!');
   };
 
   return (
@@ -72,7 +86,7 @@ const Menu = ({ orders, setOrders }) => {
             <img src={dish.image_url} alt={dish.name} className="w-full h-48 object-cover rounded-md mb-2" />
             <h3 className="font-semibold">{dish.name}</h3>
             <p className="text-gray-600">${dish.price}</p>
-            <p className="text-gray-500">Available: {dish.available_quantity}</p>
+            <p className="text-gray-500">Available: {dish.available_quantity? dish.available_quantity :"Not Available"}</p>
             {dish.available_quantity > 0 && (
               <div>
                 <button 
@@ -112,6 +126,7 @@ const Menu = ({ orders, setOrders }) => {
           onClose={() => setOrderFormVisible(false)}
         />
       )}
+      <ToastContainer />
     </div>
   );
 };

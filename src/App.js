@@ -1,13 +1,20 @@
-
-
-// src/App.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Menu from './Menu';
 import OrderHistory from './OrderHistory';
+import axios from 'axios';
 
 const App = () => {
   const [orders, setOrders] = useState([]);
+  const [dishes, setDishes] = useState([]); // Moved dishes state here
   const [viewOrderHistory, setViewOrderHistory] = useState(false);
+
+  useEffect(() => {
+    const fetchDishes = async () => {
+      const response = await axios.get("https://api.jsonbin.io/v3/b/66faa41facd3cb34a88ed968");
+      setDishes(response.data.record);
+    };
+    fetchDishes();
+  }, []);
 
   return (
     <div className="bg-gray-100 min-h-screen">
@@ -22,7 +29,7 @@ const App = () => {
         {viewOrderHistory ? (
           <OrderHistory orders={orders} />
         ) : (
-          <Menu orders={orders} setOrders={setOrders} />
+          <Menu dishes={dishes} orders={orders} setOrders={setOrders} setDishes={setDishes} />
         )}
       </div>
     </div>
@@ -30,24 +37,3 @@ const App = () => {
 };
 
 export default App;
-
-
-
-// import React from 'react';
-// import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-// import Data from './dataFetch'; // Your Data component
-// import Cart from './Cart'; // Your Cart component
-
-// const App = () => {
-//   return (
-//     <Router>
-//       <Routes>
-//         <Route path="/" element={<Data />} />
-//         <Route path="/cart" element={<Cart />} />
-//       </Routes>
-//     </Router>
-//   );
-// };
-
-// export default App; // Ensure this line is here to export App
-
